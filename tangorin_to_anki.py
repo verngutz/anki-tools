@@ -1,24 +1,19 @@
-import colorama
-import csv
-import jaconv
-import json
-import os
-import requests
-import shutil
-import termcolor
-import unicodedata
-import urllib.parse
+#!/usr/bin/python3
+import colorama, csv, jaconv, json, os, requests, shutil, termcolor, urllib.parse
 
 colorama.init()
 
 DECK_NAME = ('Japanese::Monogatari Series 2nd Season', 'Japanese::Tangorin')[0]
-CSV_FILE = 'vocabulary_66952.csv'
+CSV_FILE = ('vocabulary_68303.csv', 'vocabulary_61795.csv')[0]
 MODEL_NAME = 'iKnow! Vocabulary Plus PoS'
 DOWNLOADS_FOLDER = '/mnt/c/Users/Vernon/Downloads'
 ANKI_MEDIA_FOLDER = '/mnt/c/Users/Vernon/AppData/Roaming/Anki2/ユーザー 1/collection.media'
 
+with open('/etc/resolv.conf') as f:
+    ip_address = next(line for line in f.readlines() if line.startswith('nameserver')).split()[-1]
+
 def makeRequest(action, **params):
-    return requests.post('http://localhost:8765', data=json.dumps({
+    return requests.post(f'http://{ip_address}:8765', data=json.dumps({
         'action': action,
         'params': params, 
         'version': 6
@@ -28,8 +23,7 @@ def findFileName(kanji, reading):
     try:
         hiragana = jaconv.kata2hira(kanji)
         return next(f for f in os.listdir(DOWNLOADS_FOLDER)
-                    if f in (f'pronunciation_ja_{name}.mp3' 
-                             for name in [kanji, reading, hiragana])
+                    if f in (f'pronunciation_ja_{name}.mp3' for name in [kanji, reading, hiragana])
                     or kanji in f
                     or (reading and reading in f)
                     or hiragana in f)
