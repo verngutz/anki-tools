@@ -54,14 +54,14 @@ for track in (12, 1, 2, 3, 4, 5, 8):
     for problemset in PVFGet(url=f'problemsets?track={track}&user=1&extras=id'):
         print(f'Checking problem set {problemset["title"]}...')
         for problem in PVFGet(url=f'problems?problemset={problemset["id"]}&user=1&online_judge=AT&extras=comment'):
-            if problem['solved'] and problem['comment']:
+            if problem['solved']:
                 if problem['__str__'] not in problem_data:
                     problem_data[problem['__str__']] = {
                         'Key': f'{problem["__str__"].split("-")[0][:-1]} (original)',
                         'Statement': '-'.join(problem['__str__'].split('-')[1:])[1:],
                         'Statement Link': problem['url'],
-                        'Solution': problem['comment'],
-                        'Solution Link': f'https://img.atcoder.jp/{problem["__str__"].split()[0].lower()}/editorial',
+                        'Solution': problem['comment'] or 'Solution',
+                        'Solution Link': f'https://img.atcoder.jp/{problem["__str__"].split()[0].lower()}/editorial.pdf',
                         'Tag': []
                     }
                 problem_data[problem['__str__']]['Tag'].append(problemset['title'])
@@ -75,7 +75,7 @@ for data in problem_data.values():
         print(f'Found {data["Key"]}, updating...', end='')
         makeRequest(action='updateNoteFields', note={'id': search['result'][0], 'fields': data})
     else:
-        print(f'Did not find {data["Key"]}, creating...', end='')
+        print(termcolor.colored(f'Did not find {data["Key"]}, creating...', 'blue'), end='')
         makeRequest(action='addNote', note={
             'deckName': 'Competitive Programming',
             'modelName': 'Competitive Programming',
