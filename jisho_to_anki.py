@@ -2,23 +2,37 @@
 import browser_cookie3, bs4, csv, os, pydub, pydub.playback, requests, shutil, urllib.parse
 from common import *
 
-DECK_NAME = ('Japanese::Monogatari Series 2nd Season', 'Japanese::Tangorin')[1]
-CSV_FILE = ('vocabulary_68303.csv', 'vocabulary_61795.csv')[1]
+DECK_NAME = [
+    'Japanese::Monogatari Series 2nd Season',
+    'Japanese::Monogatari Series',
+    'Japanese::Tangorin',
+    'Japanese::Mahou Shoujo Madoka★Magica'
+][2]
 MODEL_NAME = 'iKnow! Vocabulary Plus PoS'
+VOCAB_FILE = 'C:/Users/Vernon/Documents/anki-tools/vocabulary.txt'
 DOWNLOADS_FOLDER = 'C:/Users/Vernon/Downloads'
 ANKI_MEDIA_FOLDER = 'C:/Users/Vernon/AppData/Roaming/Anki2/ユーザー 1/collection.media'
 
-cookies = browser_cookie3.chrome(domain_name='.forvo.com')
+print('Creating deck...', end='')
+makeRequest(action='createDeck', deck=DECK_NAME)
+success()
+
+cookies = browser_cookie3.chrome()
 
 def forvo_get(url):
     request = requests.get(
         url=url,
         headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36',
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        },
-        cookies=cookies
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8,ja;q=0.7,fil;q=0.6,zh-CN;q=0.5,zh;q=0.4,ru;q=0.3',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-User': '?1',
+            'Cookie': ''
+        }
     )
     if request.status_code == requests.codes.ok:
         return request
@@ -26,11 +40,21 @@ def forvo_get(url):
         error(f'error {request.status_code} while trying to access {url}')
         return None
 
-with open(f'{DOWNLOADS_FOLDER}/{CSV_FILE}', 'r', encoding='utf-8') as f:
-    for row in csv.reader(f):
-        kanji, reading, meaning = row
-        print(f'Adding note {kanji} ({reading})...')
+def jisho_get(word):
+    url = f'https://jisho.org/api/v1/search/words?keyword={word}'
+    request = requests.get(url)
+    if request.status_code == requests.codes.ok:
+        for row in request.json()['data']:
+            if row['slug'] == word:
+                return row['japanese'][0]['word'], row['japanese'][0]['reading'], ';'.join(row['senses'][0]['english_definitions'])
+    else:
+        error(f'error {request.status_code} while trying to access {url}')
+        return None
 
+with open(VOCAB_FILE, 'r', encoding='utf-8') as f:
+    for line in f.readlines():
+        kanji, reading, meaning = jisho_get(line.strip())
+        print(f'Adding note {kanji} ({reading}): {meaning}')
         word_links = set(f'https://forvo.com/word/{urllib.parse.quote(word.encode("utf-8"))}/#ja' for word in [kanji, reading] if word)
         search_links = set(f'https://forvo.com/search/{urllib.parse.quote(word.encode("utf-8"))}' for word in [kanji, reading] if word)
         for link in search_links:
