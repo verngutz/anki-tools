@@ -46,7 +46,7 @@ def jisho_get(word):
     if request.status_code == requests.codes.ok:
         for row in request.json()['data']:
             if row['slug'] == word:
-                return row['japanese'][0]['word'], row['japanese'][0]['reading'], ';'.join(row['senses'][0]['english_definitions'])
+                return row['japanese'][0]['word'], row['japanese'][0]['reading'], '; '.join(row['senses'][0]['english_definitions'])
     else:
         error(f'error {request.status_code} while trying to access {url}')
         return None
