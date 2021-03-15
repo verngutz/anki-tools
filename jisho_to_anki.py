@@ -42,9 +42,11 @@ def jisho_get(word):
     url = f'https://jisho.org/api/v1/search/words?keyword={word}'
     request = requests.get(url)
     if request.status_code == requests.codes.ok:
-        for row in request.json()['data']:
-            if row['slug'] == word:
-                return row['japanese'][0]['word'], row['japanese'][0]['reading'], '; '.join(row['senses'][0]['english_definitions'])
+        row = request.json()['data'][0]
+        kanji = row['japanese'][0].get('word', row['japanese'][0]['reading'])
+        reading = row['japanese'][0]['reading']
+        meaning = '; '.join(row['senses'][0]['english_definitions'])
+        return kanji, reading, meaning
     else:
         error(f'error {request.status_code} while trying to access {url}')
         return None
