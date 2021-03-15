@@ -17,8 +17,6 @@ print('Creating deck...', end='')
 makeRequest(action='createDeck', deck=DECK_NAME)
 success()
 
-cookies = browser_cookie3.chrome()
-
 def forvo_get(url):
     request = requests.get(
         url=url,
@@ -30,9 +28,9 @@ def forvo_get(url):
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-User': '?1',
-            'Cookie': ''
-        }
+            'Sec-Fetch-User': '?1'
+        },
+        cookies=browser_cookie3.chrome(domain_name='.forvo.com')
     )
     if request.status_code == requests.codes.ok:
         return request
