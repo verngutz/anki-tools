@@ -17,9 +17,11 @@ def print_error_and_pause(message):
         if input('Continue? (y/n): ') != 'y':
             exit(-1)
 
-def makeRequest(action, **params):
-    return requests.post('http://localhost:8765', data=json.dumps({
+def makeAnkiRequest(action, **params):
+    response = requests.post('http://localhost:8765', data=json.dumps({
         'action': action,
         'params': params, 
         'version': 6
     }))
+    error_or_success(response.json()['error'])
+    return response.json()
