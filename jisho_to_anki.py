@@ -1,20 +1,15 @@
 #!/usr/bin/python3
-import browser_cookie3, bs4, csv, os, pydub, pydub.playback, requests, shutil, urllib.parse
+import browser_cookie3, bs4, os, pydub, pydub.playback, requests, shutil, urllib.parse
 from common import *
 
-DECK_NAME = [
-    'Japanese::Monogatari Series 2nd Season',
-    'Japanese::Monogatari Series',
-    'Japanese::Tangorin',
-    'Japanese::Mahou Shoujo Madoka★Magica'
-][2]
+DECK_NAME = 'Japanese::Japanese'
 MODEL_NAME = 'iKnow! Vocabulary Plus PoS'
 VOCAB_FILE = 'C:/Users/Vernon/Documents/anki-tools/vocabulary.txt'
 DOWNLOADS_FOLDER = 'C:/Users/Vernon/Downloads'
 ANKI_MEDIA_FOLDER = 'C:/Users/Vernon/AppData/Roaming/Anki2/ユーザー 1/collection.media'
 
 print('Creating deck...', end='')
-makeRequest(action='createDeck', deck=DECK_NAME)
+makeAnkiRequest(action='createDeck', deck=DECK_NAME)
 success()
 
 def forvo_get(url):
@@ -101,7 +96,7 @@ with open(VOCAB_FILE, 'r', encoding='utf-8') as f:
             print_error_and_pause('Audio file not found!')
         
         print('Making Anki note...')
-        request = makeRequest(action='addNote', note={
+        makeAnkiRequest(action='addNote', note={
             'deckName': DECK_NAME,
             'modelName': MODEL_NAME,
             'fields': {
@@ -112,4 +107,3 @@ with open(VOCAB_FILE, 'r', encoding='utf-8') as f:
             },
             'tags': []
         })
-        error_or_success(request.json()['error'])
