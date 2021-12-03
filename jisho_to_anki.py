@@ -2,6 +2,11 @@
 import browser_cookie3, bs4, os, pydub, pydub.playback, requests, shutil, urllib.parse
 from common import *
 
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
+
+urllib3_cn.allowed_gai_family = lambda: socket.AF_INET
+
 DECK_NAME = 'Japanese::Japanese'
 MODEL_NAME = 'iKnow! Vocabulary Plus PoS'
 VOCAB_FILE = 'C:/Users/Vernon/Documents/anki-tools/vocabulary.txt'
@@ -16,13 +21,17 @@ def forvo_get(url):
     request = requests.get(
         url=url,
         headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8,ja;q=0.7,fil;q=0.6,zh-CN;q=0.5,zh;q=0.4,ru;q=0.3',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Ch-Ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
+            'Sec-Ch-Ua-Platform': '"Windows"',
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1'
         },
         cookies=browser_cookie3.chrome(domain_name='.forvo.com')
@@ -37,19 +46,35 @@ def jisho_get(word):
     url = f'https://jisho.org/api/v1/search/words?keyword={word}'
     request = requests.get(url)
     if request.status_code == requests.codes.ok:
-        row = request.json()['data'][0]
-        kanji = row['japanese'][0].get('word', row['japanese'][0]['reading'])
-        reading = row['japanese'][0]['reading']
-        meaning = '; '.join(row['senses'][0]['english_definitions'])
-        return kanji, reading, meaning
+        data = request.json()['data']
+        if len(data) == 0:
+            print_error_and_pause(f'word not found: {word}')
+            return None
+        else:
+            if len(data) > 1:
+                for i, row in enumerate(data):
+                    print(f"{i} - {row['japanese'][0].get('word', row['japanese'][0].get('reading', ''))}")
+                index = int(input('Select word: '))
+            else:
+                index = 0
+            row = data[index]
+            kanji = row['japanese'][0].get('word', row['japanese'][0].get('reading', ''))
+            reading = row['japanese'][0].get('reading', '')
+            meaning = '\n'.join(
+                f"{i}. {'; '.join(sense['english_definitions'])}"
+                for i, sense in enumerate(row['senses'], start=1)
+            )
+            return kanji, reading, meaning
     else:
-        error(f'error {request.status_code} while trying to access {url}')
+        print_error_and_pause(f'error {request.status_code} while trying to access {url}')
         return None
 
 with open(VOCAB_FILE, 'r', encoding='utf-8') as f:
     for line in f.readlines():
-        kanji, reading, meaning = jisho_get(line.strip())
-        print(f'Adding note {kanji} ({reading}): {meaning}')
+        if (data := jisho_get(line.strip())) is None:
+            continue
+        kanji, reading, meaning = data
+        print(f'Adding note {kanji} ({reading}):\n{meaning}')
         word_links = set(f'https://forvo.com/word/{urllib.parse.quote(word.encode("utf-8"))}/#ja' for word in [kanji, reading] if word)
         search_links = set(f'https://forvo.com/search/{urllib.parse.quote(word.encode("utf-8"))}' for word in [kanji, reading] if word)
         for link in search_links:
@@ -84,13 +109,16 @@ with open(VOCAB_FILE, 'r', encoding='utf-8') as f:
                 try:
                     selected_file = forvo_files[int(input('Select which audio file to use: '))]
                     break
-                except ValueError as e:
+                except (ValueError, IndexError) as e:
+                    selected_file = None
+                    print_error_and_pause('Invalid audio file!')
+                    break
+            if selected_file:
+                print(f'Moving {selected_file} from downloads folder to Anki media folder...')
+                try:
+                    shutil.move(f'{DOWNLOADS_FOLDER}/{selected_file}', ANKI_MEDIA_FOLDER)
+                except shutil.Error as e:
                     error(e)
-            print(f'Moving {selected_file} from downloads folder to Anki media folder...')
-            try:
-                shutil.move(f'{DOWNLOADS_FOLDER}/{selected_file}', ANKI_MEDIA_FOLDER)
-            except shutil.Error as e:
-                error(e)
         else:
             selected_file = None
             print_error_and_pause('Audio file not found!')
